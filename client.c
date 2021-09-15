@@ -30,7 +30,8 @@
 
 #include <unistd.h>
 
-#define SERVER_PORT 6666
+#define SERVER_PORT		6666
+#define BUFFER_SIZE		1024
 
 /*
    连接到服务器后，会不停循环，等待输入，
@@ -49,12 +50,12 @@ int main()
 
 		struct sockaddr_in serverAddr;
 
-		char sendbuf[200];
+		char sendbuf[BUFFER_SIZE];
 
 		char recvbuf[200];
 
 		int iDataNum;
-
+		int isendCnt = 0;
 		if((clientSocket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 
 		{
@@ -90,7 +91,20 @@ int main()
 		while(1)
 
 		{
-
+				if (fgets(sendbuf, BUFFER_SIZE - 1, stdin))
+				{
+					if(strcmp(sendbuf, "quit") == 0)
+						break;
+						
+					isendCnt = send(clientSocket, sendbuf, strlen(sendbuf), 0);
+					printf("isendCnt = %d\n", isendCnt);
+					if (isendCnt <= 0)
+					{
+						close(clientSocket);
+						return -1;
+					}
+				}
+				#if 0
 				printf("发送消息:");
 
 				scanf("%s", sendbuf);
@@ -114,7 +128,7 @@ int main()
 				recvbuf[iDataNum] = '\0';
 
 				printf("%s\n", recvbuf);
-
+				#endif
 		}
 
 		close(clientSocket);

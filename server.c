@@ -1,119 +1,1 @@
-/*************************************************************************
-  > File Name: server.c
-  > Author: linjh
-  > Mail: lin_461379@163.com 
-  > Created Time: 2021å¹´07æœˆ22æ—¥ æ˜ŸæœŸå›› 16æ—¶22åˆ†06ç§’
- ************************************************************************/
-
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <netdb.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-
-#define SERVER_PORT 6666
-/*
-   ç›‘å¬åï¼Œä¸€ç›´å¤„äºaccepté˜»å¡çŠ¶æ€ï¼Œ
-   ç›´åˆ°æœ‰å®¢æˆ·ç«¯è¿æ¥ï¼Œ
-   å½“å®¢æˆ·ç«¯å¦‚æ•°quitåï¼Œæ–­å¼€ä¸å®¢æˆ·ç«¯çš„è¿æ¥
- */
-int main()
-
-{
-
-		//è°ƒç”¨socketå‡½æ•°è¿”å›çš„æ–‡ä»¶æè¿°ç¬¦
-		int serverSocket;
-		//å£°æ˜ä¸¤ä¸ªå¥—æ¥å­—sockaddr_inç»“æ„ä½“å˜é‡ï¼Œåˆ†åˆ«è¡¨ç¤ºå®¢æˆ·ç«¯å’ŒæœåŠ¡å™¨
-		struct sockaddr_in server_addr;
-		struct sockaddr_in clientAddr;
-		int addr_len = sizeof(clientAddr);
-		int client;
-		char buffer[200];
-		int iDataNum;
-		//socketå‡½æ•°ï¼Œå¤±è´¥è¿”å›-1
-		//int socket(int domain, int type, int protocol);
-		//ç¬¬ä¸€ä¸ªå‚æ•°è¡¨ç¤ºä½¿ç”¨çš„åœ°å€ç±»å‹ï¼Œä¸€èˆ¬éƒ½æ˜¯ipv4ï¼ŒAF_INET
-		//ç¬¬äºŒä¸ªå‚æ•°è¡¨ç¤ºå¥—æ¥å­—ç±»å‹ï¼štcpï¼šé¢å‘è¿æ¥çš„ç¨³å®šæ•°æ®ä¼ è¾“SOCK_STREAM
-		//ç¬¬ä¸‰ä¸ªå‚æ•°è®¾ç½®ä¸º0
-		if((serverSocket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-		{
-
-				perror("socket");
-
-				return 1;
-
-		}
-		bzero(&server_addr, sizeof(server_addr));
-		//åˆå§‹åŒ–æœåŠ¡å™¨ç«¯çš„å¥—æ¥å­—ï¼Œå¹¶ç”¨htonså’Œhtonlå°†ç«¯å£å’Œåœ°å€è½¬æˆç½‘ç»œå­—èŠ‚åº
-		server_addr.sin_family = AF_INET;
-		server_addr.sin_port = htons(SERVER_PORT);
-		//ipå¯æ˜¯æ˜¯æœ¬æœåŠ¡å™¨çš„ipï¼Œä¹Ÿå¯ä»¥ç”¨å®INADDR_ANYä»£æ›¿ï¼Œä»£è¡¨0.0.0.0ï¼Œè¡¨æ˜æ‰€æœ‰åœ°å€
-		server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-		//å¯¹äºbindï¼Œacceptä¹‹ç±»çš„å‡½æ•°ï¼Œé‡Œé¢å¥—æ¥å­—å‚æ•°éƒ½æ˜¯éœ€è¦å¼ºåˆ¶è½¬æ¢æˆ(struct sockaddr *)
-		//bindä¸‰ä¸ªå‚æ•°ï¼šæœåŠ¡å™¨ç«¯çš„å¥—æ¥å­—çš„æ–‡ä»¶æè¿°ç¬¦ï¼Œ
-		if(bind(serverSocket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
-		{
-				perror("connect");
-				return 1;
-		}
-		//è®¾ç½®æœåŠ¡å™¨ä¸Šçš„socketä¸ºç›‘å¬çŠ¶æ€
-		if(listen(serverSocket, 5) < 0)
-		{
-				perror("listen");
-				return 1;
-		}
-		while(1)
-		{
-				printf("ç›‘å¬ç«¯å£: %d\n", SERVER_PORT);
-				//è°ƒç”¨acceptå‡½æ•°åï¼Œä¼šè¿›å…¥é˜»å¡çŠ¶æ€
-				//acceptè¿”å›ä¸€ä¸ªå¥—æ¥å­—çš„æ–‡ä»¶æè¿°ç¬¦ï¼Œè¿™æ ·æœåŠ¡å™¨ç«¯ä¾¿æœ‰ä¸¤ä¸ªå¥—æ¥å­—çš„æ–‡ä»¶æè¿°ç¬¦ï¼Œ
-				//serverSocketå’Œclientã€‚
-				//serverSocketä»ç„¶ç»§ç»­åœ¨ç›‘å¬çŠ¶æ€ï¼Œclientåˆ™è´Ÿè´£æ¥æ”¶å’Œå‘é€æ•°æ®
-				//clientAddræ˜¯ä¸€ä¸ªä¼ å‡ºå‚æ•°ï¼Œacceptè¿”å›æ—¶ï¼Œä¼ å‡ºå®¢æˆ·ç«¯çš„åœ°å€å’Œç«¯å£å·
-				//addr_lenæ˜¯ä¸€ä¸ªä¼ å…¥-ä¼ å‡ºå‚æ•°ï¼Œä¼ å…¥çš„æ˜¯è°ƒç”¨è€…æä¾›çš„ç¼“å†²åŒºçš„clientAddrçš„é•¿åº¦ï¼Œä»¥é¿å…ç¼“å†²åŒºæº¢å‡ºã€‚
-				//ä¼ å‡ºçš„æ˜¯å®¢æˆ·ç«¯åœ°å€ç»“æ„ä½“çš„å®é™…é•¿åº¦ã€‚
-				//å‡ºé”™è¿”å›-1
-				client = accept(serverSocket, (struct sockaddr*)&clientAddr, (socklen_t*)&addr_len);
-				if(client < 0)
-				{
-						perror("accept");
-						continue;
-				}
-				printf("ç­‰å¾…æ¶ˆæ¯...\n");
-				//inet_ntoa ipåœ°å€è½¬æ¢å‡½æ•°ï¼Œå°†ç½‘ç»œå­—èŠ‚åºIPè½¬æ¢ä¸ºç‚¹åˆ†åè¿›åˆ¶IP
-				//è¡¨è¾¾å¼ï¼šchar *inet_ntoa (struct in_addr);
-				printf("IP is %s\n", inet_ntoa(clientAddr.sin_addr));
-				printf("Port is %d\n", htons(clientAddr.sin_port));
-				while(1)
-				{
-						printf("è¯»å–æ¶ˆæ¯:");
-						buffer[0] = '\0';
-						iDataNum = recv(client, buffer, 1024, 0);
-						if(iDataNum < 0)
-						{
-								perror("recv null");
-								continue;
-						}
-						buffer[iDataNum] = '\0';
-						if(strcmp(buffer, "quit") == 0)
-								break;
-						printf("%s\n", buffer);
-						printf("å‘é€æ¶ˆæ¯:");
-						scanf("%s", buffer);
-						printf("\n");
-						send(client, buffer, strlen(buffer), 0);
-						if(strcmp(buffer, "quit") == 0)
-								break;
-				}
-		}
-		close(serverSocket);
-		return 0;
-
-}
+/*************************************************************************  > File Name: server.c  > Author: linjh  > Mail: lin_461379@163.com   > Created Time: 2021Äê07ÔÂ22ÈÕ ĞÇÆÚËÄ 16Ê±22·Ö06Ãë ************************************************************************/ #include <sys/stat.h>#include <fcntl.h>#include <errno.h>#include <netdb.h>#include <sys/types.h>#include <sys/socket.h>#include <netinet/in.h>#include <arpa/inet.h>#include <stdio.h>#include <string.h>#include <stdlib.h>#include <unistd.h>#include <pthread.h>#define SERVER_PORT 	6666#define BUFFER_SIZE 	1024#define CONNECT_MAX		5struct pthread_socket{	int socket_d;	char client_addr[20];};static int connect_cnt = 0;static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;/*************************************************************************  > method Name: thread_recv.c  > Author: lije  > Mail: 110@163.com   > Created Time: 2021Äê09ÔÂ15ÈÕ ĞÇÆÚ¶ş 10Ê±35·Ö06Ãë ************************************************************************/static void *thread_recv(void *arg){	char buffer[BUFFER_SIZE] = {0};	struct pthread_socket *pt = (struct pthread_socket *)arg;	int sd = pt->socket_d;	char addr[20] = {0};	int rvCnt = 0;		strcpy(addr, pt->client_addr);		while (1)	{		/* ³õÊ¼»¯½ÓÊÕBuffer */		memset(buffer, 0, sizeof(buffer));				/* ×èÈû½ÓÊÕÊı¾İ */		rvCnt = recv(sd, buffer, sizeof(buffer), 0);		if (rvCnt < 0)				//½ÓÊÕ³ö´í		{			perror("recive error\n");			break;		}		else if (rvCnt == 0)		//¿Í»§¶Ë¶Ï¿ªÁ¬½Ó		{			printf("client close the connect\n");			break;		}				printf("recive Ip:%s message:%s\n", addr, buffer);	}	pthread_mutex_lock(&mutex);	connect_cnt--;	pthread_mutex_unlock(&mutex);	close(sd);	return NULL;}int main(){	//µ÷ÓÃsocketº¯Êı·µ»ØµÄÎÄ¼şÃèÊö·û	int serverSocket;	//ÉùÃ÷Á½¸öÌ×½Ó×Ösockaddr_in½á¹¹Ìå±äÁ¿£¬·Ö±ğ±íÊ¾¿Í»§¶ËºÍ·şÎñÆ÷	struct sockaddr_in server_addr;	struct sockaddr_in clientAddr;	int addr_len = sizeof(clientAddr);	char buffer[200];	static int client;	int iDataNum;	struct pthread_socket tPs;	pthread_t th_recv;		//socketº¯Êı£¬Ê§°Ü·µ»Ø-1	//int socket(int domain, int type, int protocol);	//µÚÒ»¸ö²ÎÊı±íÊ¾Ê¹ÓÃµÄµØÖ·ÀàĞÍ£¬Ò»°ã¶¼ÊÇipv4£¬AF_INET	//µÚ¶ş¸ö²ÎÊı±íÊ¾Ì×½Ó×ÖÀàĞÍ£ºtcp£ºÃæÏòÁ¬½ÓµÄÎÈ¶¨Êı¾İ´«ÊäSOCK_STREAM	//µÚÈı¸ö²ÎÊıÉèÖÃÎª0	if((serverSocket = socket(AF_INET, SOCK_STREAM, 0)) < 0)	{		perror("socket");		return 1;	}	bzero(&server_addr, sizeof(server_addr));	//³õÊ¼»¯·şÎñÆ÷¶ËµÄÌ×½Ó×Ö£¬²¢ÓÃhtonsºÍhtonl½«¶Ë¿ÚºÍµØÖ·×ª³ÉÍøÂç×Ö½ÚĞò	server_addr.sin_family = AF_INET;	server_addr.sin_port = htons(SERVER_PORT);	//ip¿ÉÊÇÊÇ±¾·şÎñÆ÷µÄip£¬Ò²¿ÉÒÔÓÃºêINADDR_ANY´úÌæ£¬´ú±í0.0.0.0£¬±íÃ÷ËùÓĞµØÖ·	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);	//¶ÔÓÚbind£¬acceptÖ®ÀàµÄº¯Êı£¬ÀïÃæÌ×½Ó×Ö²ÎÊı¶¼ÊÇĞèÒªÇ¿ÖÆ×ª»»³É(struct sockaddr *)	//bindÈı¸ö²ÎÊı£º·şÎñÆ÷¶ËµÄÌ×½Ó×ÖµÄÎÄ¼şÃèÊö·û£¬	if(bind(serverSocket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)	{		perror("connect");		return 1;	}	//ÉèÖÃ·şÎñÆ÷ÉÏµÄsocketÎª¼àÌı×´Ì¬	if(listen(serverSocket, CONNECT_MAX) < 0)	{		perror("listen");		return 1;	}	while(1)	{		printf("port: %d\n", SERVER_PORT);		//µ÷ÓÃacceptº¯Êıºó£¬»á½øÈë×èÈû×´Ì¬		//accept·µ»ØÒ»¸öÌ×½Ó×ÖµÄÎÄ¼şÃèÊö·û£¬ÕâÑù·şÎñÆ÷¶Ë±ãÓĞÁ½¸öÌ×½Ó×ÖµÄÎÄ¼şÃèÊö·û£¬		//serverSocketºÍclient¡£		//serverSocketÈÔÈ»¼ÌĞøÔÚ¼àÌı×´Ì¬£¬clientÔò¸ºÔğ½ÓÊÕºÍ·¢ËÍÊı¾İ		//clientAddrÊÇÒ»¸ö´«³ö²ÎÊı£¬accept·µ»ØÊ±£¬´«³ö¿Í»§¶ËµÄµØÖ·ºÍ¶Ë¿ÚºÅ		//addr_lenÊÇÒ»¸ö´«Èë-´«³ö²ÎÊı£¬´«ÈëµÄÊÇµ÷ÓÃÕßÌá¹©µÄ»º³åÇøµÄclientAddrµÄ³¤¶È£¬ÒÔ±ÜÃâ»º³åÇøÒç³ö¡£		//´«³öµÄÊÇ¿Í»§¶ËµØÖ·½á¹¹ÌåµÄÊµ¼Ê³¤¶È¡£		//³ö´í·µ»Ø-1		client = accept(serverSocket, (struct sockaddr*)&clientAddr, (socklen_t*)&addr_len);		if(client < 0)		{			perror("accept");			continue;		}				pthread_mutex_lock(&mutex);		connect_cnt++;		pthread_mutex_unlock(&mutex);				printf("current connect count: %d\n", connect_cnt);				tPs.socket_d = client;		strcpy(tPs.client_addr, inet_ntoa(clientAddr.sin_addr));		//printf("tPs.socket_d = %d\n", tPs.socket_d);		//printf("tPs.client_addr = %s\n", tPs.client_addr);				/* Îªµ±Ç°Á¬½ÓµÄsocket´´½¨½ÓÊÕÏß³Ì */		if (pthread_create(&th_recv, NULL, thread_recv, &tPs) != 0)		{			printf("creat the recive thread fail!\n");			break;		}				/* ÉèÖÃÏß³Ì·ÖÀë */		pthread_detach(th_recv);				//printf("????...\n");		//inet_ntoa ipµØÖ·×ª»»º¯Êı£¬½«ÍøÂç×Ö½ÚĞòIP×ª»»Îªµã·ÖÊ®½øÖÆIP		//±í´ïÊ½£ºchar *inet_ntoa (struct in_addr);		printf("IP is %s\n", inet_ntoa(clientAddr.sin_addr));		printf("Port is %d\n", htons(clientAddr.sin_port));		#if 0		while(1)		{			printf("????:");			buffer[0] = '\0';			iDataNum = recv(client, buffer, 1024, 0);			if(iDataNum < 0)			{				perror("recv null");				continue;			}			buffer[iDataNum] = '\0';			if(strcmp(buffer, "quit") == 0)				break;			printf("%s\n", buffer);			printf("????:");			scanf("%s", buffer);			printf("\n");			send(client, buffer, strlen(buffer), 0);			if(strcmp(buffer, "quit") == 0)				break;		}		#endif	}	close(serverSocket);	return 0;}
